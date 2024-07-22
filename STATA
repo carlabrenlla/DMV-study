@@ -1,0 +1,244 @@
+* quartiles variables DMV
+*DMV_appearance score
+xtile DMV_q=DMV,nq(4)
+*DMV_count score
+xtile DMVcount_q=DMVcount,nq(4)
+*inverse quartile count
+recode DMVcount_q (1=4) (2=3) (3=2) (4=1) , gen (inv_DMVcount_q)
+*descriptive analysis DMV
+sum DMVcount, detail
+sum DMVcount_stroke_side, detail
+sum DMVcount_nonstroke_side, detail
+ttest DMVcount_stroke_side == DMVcount_nonstroke_side
+ttest L_count == R_count
+by mainregion_3, sort : ttest DMVcount_stroke_side == DMVcount_nonstroke_side
+sum DMV, detail
+ttest L_DMV == R_DMV
+tabulate DMV_q inv_DMVcount_q, cell chi2
+* DMV count right vs. left side
+ttest L_DMV == R_DMV
+* Spearman coefficient according to DMV score regions
+spearman L_F_DMVscore L_P_DMVscore L_O_DMVscore, stats(rho obs p) bonferroni
+pw
+spearman R_F_DMVscore R_P_DMVscore R_O_DMVscore, stats(rho obs p) bonferroni
+pw
+spearman R_F_DMVscore L_F_DMVscore, stats(rho obs p)
+spearman R_P_DMVscore L_P_DMVscore, stats(rho obs p)
+spearman R_O_DMVscore L_O_DMVscore, stats(rho obs p)
+
+* DMV score and count correlation
+twoway (scatter L_count L_DMV) (lfit L_count L_DMV), ytitle(left DMV count)
+regress L_count L_DMV
+twoway (scatter R_count R_DMV) (lfit R_count R_DMV), ytitle(right DMV count)
+regress R_count R_DMV
+twoway (scatter DMVcount DMV) (lfit DMVcount DMV) (lfitci DMVcount DMV, stdf
+ciplot(rline)), ytitle(DMV count)
+regress DMVcount DMV
+
+*interrater agreement
+kapci SR_L_F_DMVscore CB_L_F_DMVscore, wgt(w2)tab
+kapci SR_L_P_DMVscore CB_L_P_DMVscore, wgt(w2)tab
+kapci SR_L_O_DMVscore CB_L_O_DMVscore, wgt(w2)tab
+kapci SR_R_F_DMVscore CB_R_F_DMVscore, wgt(w2)tab
+kapci SR_R_P_DMVscore CB_R_P_DMVscore, wgt(w2)tab
+kapci SR_R_O_DMVscore CB_R_O_DMVscore, wgt(w2)tab
+kapci SR_DMV CB_DMV, wgt(w2)tab
+*ICC
+preserve
+rename (SR_L_count CB_L_count) (Medida0 Medida1)
+reshape long Medida, i(ID_full) j(Eval)
+label define dEval 0 "SR" 1 "CB"
+label values Eval dEval
+icc Medida ID_full Eval, absolute
+restore
+preserve
+rename (SR_R_count CB_R_count) (Medida0 Medida1)
+reshape long Medida, i(ID_full) j(Eval)
+label define dEval 0 "SR" 1 "CB"
+label values Eval dEval
+icc Medida ID_full Eval, absolute
+restore
+*Bland Altman
+agree SR_L_count CB_L_count, ba
+agree SR_R_count CB_R_count, ba
+agree SR_DMVcount CB_DMVcount, ba
+agree SR_DMV CB_DMV, ba
+
+*descpritive analysis by DMV quartiles
+*DMV appearance score
+by DMV_q, sort : sum age, d
+oneway age DMV_q, tab
+tabulate Sex_ DMV_q, chi2 column
+oneway BMI DMV_q, tab
+by DMV_q, sort : sum Cigday, d
+kwallis Cigday, by(DMV_q)
+by DMV_q, sort : sum UBEday, d
+kwallis UBEday, by(DMV_q)
+tabulate HTA DMV_q, chi2 column
+tabulate DM DMV_q, chi2 column
+
+tabulate Lipid DMV_q, chi2 column
+by DMV_q, sort : sum NIHSS, d
+kwallis NIHSS, by(DMV_q)
+tabulate IschCar DMV_q, chi2 column
+tabulate AF DMV_q, chi2 column
+by DMV_q, sort : sum PSQIscore, d
+kwallis PSQIscore, by(DMV_q)
+by DMV_q, sort : sum ESS_score, d
+kwallis ESS_score, by(DMV_q)
+by DMV_q, sort : sum Lac_N, d
+kwallis Lac_N, by(DMV_q)
+by DMV_q, sort : sum CMB_N, d
+kwallis CMB_N, by(DMV_q)
+by DMV_q, sort : sum WMH_r_100, d
+kwallis WMH_r_100, by(DMV_q)
+by DMV_q, sort : sum PVS_perc_BG_area_5, d
+kwallis PVS_perc_BG_area_5, by(DMV_q)
+by DMV_q, sort : sum PVS_perc_CSO, d
+kwallis PVS_perc_CSO, by(DMV_q)
+by DMV_q, sort : sum SVDscore, d
+kwallis SVDscore, by(DMV_q)
+oneway alps_nonstroke_side DMV_q, tab
+oneway FW_NAWM_100 DMV_q, tab
+*unadjusted ordinal regression analysis
+ologit DMV_q age, or
+ologit DMV_q Sex_, or
+ologit DMV_q Cigday, or
+ologit DMV_q WMH_r_100, or
+ologit DMV_q PVS_perc_BG_area_5, or
+ologit DMV_q PVS_perc_CSO, or
+ologit DMV_q Lac_N, or
+ologit DMV_q CMB_N, or
+ologit DMV_q SVDscore, or
+ologit DMV_q alps_nonstroke_side, or
+ologit DMV_q FW_NAWM_100, or
+ologit DMV_q FW_BG_NAWM_100, or
+ologit DMV_q MD_NAWM_10000, or
+ologit DMV_q FA_NAWM_10000, or
+ologit DMV_q MDfw_NAWM_10000, or
+ologit DMV_q FAfw_NAWM_10000, or
+*model 1 (age, Sex_ , Cigday)
+ologit DMV_q WMH_r_100 age Sex_ Cigday, or
+ologit DMV_q PVS_perc_BG_area_5 age Sex_ Cigday, or
+ologit DMV_q PVS_perc_CSO age Sex_ Cigday, or
+ologit DMV_q Lac_N age Sex_ Cigday, or
+
+ologit DMV_q CMB_N age Sex_ Cigday, or
+ologit DMV_q SVDscore age Sex_ Cigday, or
+ologit DMV_q alps_nonstroke_side age Sex_ Cigday, or
+ologit DMV_q FW_NAWM_100 age Sex_ Cigday, or
+ologit DMV_q FW_BG_NAWM_100 age Sex_ Cigday, or
+ologit DMV_q MD_NAWM_10000 age Sex_ Cigday, or
+ologit DMV_q FA_NAWM_10000 age Sex_ Cigday, or
+ologit DMV_q MDfw_NAWM_10000 age Sex_ Cigday, or
+ologit DMV_q FAfw_NAWM_10000 age Sex_ Cigday, or
+*model 2 (age, Sex_ , Cigday, SVDscore)
+ologit DMV_q alps_nonstroke_side age Sex_ Cigday SVDscore, or
+ologit DMV_q FW_NAWM_100 age Sex_ Cigday SVDscore, or
+ologit DMV_q FW_BG_NAWM_100 age Sex_ Cigday SVDscore, or
+ologit DMV_q MD_NAWM_10000 age Sex_ Cigday SVDscore, or
+ologit DMV_q FA_NAWM_10000 age Sex_ Cigday SVDscore, or
+ologit DMV_q MDfw_NAWM_10000 age Sex_ Cigday SVDscore, or
+ologit DMV_q FAfw_NAWM_10000 age Sex_ Cigday SVDscore, or
+
+*Same analysis for DMV count score
+* inv_DMVcount_q
+by inv_DMVcount_q, sort : sum age, d
+oneway age inv_DMVcount_q, tab
+tabulate Sex_ inv_DMVcount_q, chi2 column
+oneway BMI inv_DMVcount_q, tab
+by inv_DMVcount_q, sort : sum Cigday, d
+kwallis Cigday, by(inv_DMVcount_q)
+by inv_DMVcount_q, sort : sum UBEday, d
+kwallis UBEday, by(inv_DMVcount_q)
+tabulate HTA inv_DMVcount_q, chi2 column
+tabulate DM inv_DMVcount_q, chi2 column
+tabulate Lipid inv_DMVcount_q, chi2 column
+by inv_DMVcount_q, sort : sum NIHSS, d
+kwallis NIHSS, by(inv_DMVcount_q)
+tabulate IschCar inv_DMVcount_q, chi2 column
+tabulate AF inv_DMVcount_q, chi2 column
+by inv_DMVcount_q, sort : sum PSQIscore, d
+kwallis PSQIscore, by(inv_DMVcount_q)
+by inv_DMVcount_q, sort : sum ESS_score, d
+kwallis ESS_score, by(inv_DMVcount_q)
+by inv_DMVcount_q, sort : sum Lac_N, d
+kwallis Lac_N, by(inv_DMVcount_q)
+by inv_DMVcount_q, sort : sum CMB_N, d
+kwallis CMB_N, by(inv_DMVcount_q)
+by inv_DMVcount_q, sort : sum WMH_r_100, d
+kwallis WMH_r_100, by(inv_DMVcount_q)
+
+by inv_DMVcount_q, sort : sum PVS_perc_BG_area_5, d
+kwallis PVS_perc_BG_area_5, by(inv_DMVcount_q)
+by inv_DMVcount_q, sort : sum PVS_perc_CSO, d
+kwallis PVS_perc_CSO, by(inv_DMVcount_q)
+by inv_DMVcount_q, sort : sum SVDscore, d
+kwallis SVDscore, by(inv_DMVcount_q)
+oneway alps_nonstroke_side inv_DMVcount_q, tab
+oneway FW_NAWM_100 inv_DMVcount_q, tab
+*unadjusted
+ologit inv_DMVcount_q age, or
+ologit inv_DMVcount_q Sex_, or
+ologit inv_DMVcount_q Cigday, or
+ologit inv_DMVcount_q WMH_r_100, or
+ologit inv_DMVcount_q PVS_perc_BG_area_5, or
+ologit inv_DMVcount_q PVS_perc_CSO, or
+ologit inv_DMVcount_q Lac_N, or
+ologit inv_DMVcount_q CMB_N, or
+ologit inv_DMVcount_q SVDscore, or
+ologit inv_DMVcount_q alps_nonstroke_side, or
+ologit inv_DMVcount_q FW_NAWM_100, or
+ologit inv_DMVcount_q FW_BG_NAWM_100, or
+ologit inv_DMVcount_q MD_NAWM_10000, or
+ologit inv_DMVcount_q FA_NAWM_10000, or
+ologit inv_DMVcount_q MDfw_NAWM_10000, or
+ologit inv_DMVcount_q FAfw_NAWM_10000, or
+*model 1
+ologit inv_DMVcount_q WMH_r_100 age Sex_ Cigday, or
+ologit inv_DMVcount_q PVS_perc_BG_area_5 age Sex_ Cigday, or
+ologit inv_DMVcount_q PVS_perc_CSO age Sex_ Cigday, or
+ologit inv_DMVcount_q Lac_N age Sex_ Cigday, or
+ologit inv_DMVcount_q CMB_N age Sex_ Cigday, or
+ologit inv_DMVcount_q SVDscore age Sex_ Cigday, or
+ologit inv_DMVcount_q alps_nonstroke_side age Sex_ Cigday, or
+ologit inv_DMVcount_q FW_NAWM_100 age Sex_ Cigday, or
+ologit inv_DMVcount_q FW_BG_NAWM_100 age Sex_ Cigday, or
+ologit inv_DMVcount_q MD_NAWM_10000 age Sex_ Cigday, or
+ologit inv_DMVcount_q FA_NAWM_10000 age Sex_ Cigday, or
+ologit inv_DMVcount_q MDfw_NAWM_10000 age Sex_ Cigday, or
+ologit inv_DMVcount_q FAfw_NAWM_10000 age Sex_ Cigday, or
+*model 2
+ologit inv_DMVcount_q alps_nonstroke_side age Sex_ Cigday SVDscore, or
+ologit inv_DMVcount_q FW_NAWM_100 age Sex_ Cigday SVDscore, or
+ologit inv_DMVcount_q FW_BG_NAWM_100 age Sex_ Cigday SVDscore, or
+ologit inv_DMVcount_q MD_NAWM_10000 age Sex_ Cigday SVDscore, or
+
+ologit inv_DMVcount_q FA_NAWM_10000 age Sex_ Cigday SVDscore, or
+ologit inv_DMVcount_q MDfw_NAWM_10000 age Sex_ Cigday SVDscore, or
+ologit inv_DMVcount_q FAfw_NAWM_10000 age Sex_ Cigday SVDscore, or
+
+*heatplot (chrome-
+extension://efaidnbmnnnibpcajpcglclefindmkaj/https://www.stata.com/meeting/germ
+
+any19/slides/germany19_Jann.pdf)clear
+preserve
+correlate DMV DMVcount PVS_BG PVS_CS PVS_M FazPV FazDWM CMB_N Lac_N
+Lacsizemm
+matrix C=r(C)
+heatplot C, label values(format(%9.2f)) color(hcl diverging, intensity(.6)) legend(off)
+aspectratio(1) xlabel (, angle(45)) lower nodiagonal
+restore
+pwcorr DMV DMVcount PVS_BG PVS_CS PVS_M FazPV FazDWM CMB_N Lac_N
+Lacsizemm, sig bonferroni
+matrix C=r(C)
+heatplot C, label values(format(%9.3f)) color(hcl diverging, intensity(1)) legend(off)
+aspectratio(1) xlabel (, angle(45))
+
+*graphs
+graph box WMH_r_100, over(DMV_q)
+graph box Brain_vol_mL, over(DMV_q)
+graph box FW_NAWM_100, over(DMV_q)
+graph box WMH_r_100, over(inv_DMVcount_q)
+graph box Brain_vol_mL, over(inv_DMVcount_q)
+graph box FW_NAWM_100, over(inv_DMVcount_q)
